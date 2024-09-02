@@ -61,22 +61,17 @@ if 'username' not in st.session_state:
 else:
     st.sidebar.success("Logged in as {}".format(st.session_state.username))
 
-    def generate_summary_name(messages):
-        # Use OpenAI to generate a summarized name
-        response = client.chat.completions.create(
-            model="ft:gpt-4o-mini-2024-07-18:luri-inc:81-103-file-datast:9wqTaPqj",
-            messages=[{"role": "system", "content": "Generate a concise title or name based on the following conversation. It must strongly be less than 7 words. Also make sure to not use any quotation marks"}] + messages
-        )
-        return response.choices[0].message.content.strip()
+    def extract_first_three_words(text):
+        return ' '.join(text.split()[:15])
 
     def save_chat(name=None):
         chats = get_chats(conn, st.session_state.username)
         chat_exists = False
 
-        if name is None:
-            # Generate a summarized name using OpenAI
-            summary_name = generate_summary_name(st.session_state.conversation[:2])  # Using first 2 messages for summary
-            name = summary_name
+        if name is None and len(st.session_state.messages) > 1:
+            # Extract the first 3 words from the first assistant's response
+            first_response = st.session_state.messages[1]["message"]
+            name = extract_first_three_words(first_response)
 
         for chat in chats:
             if chat[1] == name:
@@ -161,10 +156,10 @@ else:
             st.markdown(message["message"])
 
     # Keep the input area and submit button at the bottom
-    if 'user_input' not in st.session_state:
-        st.session_state.user_input = ""
+    if 'user_input_1' not in st.session_state:
+        st.session_state.user_input_1 = ""
 
-    user_input = st.text_area("Let's Chat!", value=st.session_state.user_input, height=100)
+    user_input = st.text_area("Let's Chat!", value=st.session_state.user_input_1, height=100, key="chat_input")
 
     if st.button("Submit"):
         if user_input.strip():  # Check if input is not empty
@@ -172,27 +167,23 @@ else:
             st.session_state.conversation.append({"role": "user", "content": user_input})
             with st.chat_message("user"):
                 st.markdown(user_input)
-            
+                
             with st.chat_message("assistant"):
                 message_placeholder = st.empty()
-                full_response = ""
+                assistant_response = ""
                 response = get_openai_response()
                 for char in response:
-                    full_response += char
-                    message_placeholder.markdown(full_response + "▌")
+                    assistant_response += char
+                    message_placeholder.markdown(assistant_response + "▌")
                     time.sleep(0.001)
-                message_placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "message": full_response})
-            st.session_state.conversation.append({"role": "assistant", "content": full_response})
+                message_placeholder.markdown(assistant_response)
+            st.session_state.messages.append({"role": "assistant", "message": assistant_response})
+            st.session_state.conversation.append({"role": "assistant", "content": assistant_response})
             
             if len(st.session_state.messages) <= 2:
-                save_chat()  # Save with a generated name
+                save_chat()  # Save with the first 3 words of the first assistant's response
             else:
                 for message in st.session_state.messages:
                     save_message(conn, st.session_state.chat_id, message["role"], message["message"])
-
-            # Clear the text area by resetting session state
-            st.session_state.user_input = ""
-            st.experimental_rerun()  # This triggers a rerun, and the input box will be empty
-
-    # The text area will be empty here on rerun after submission
+            st.session_state.user_input_1 = " "
+            st.rerun()
