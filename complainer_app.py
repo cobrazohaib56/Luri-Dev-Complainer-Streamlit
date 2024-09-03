@@ -31,6 +31,9 @@ if 'conversation' not in st.session_state:
 if 'system_prompt_added' not in st.session_state:
     st.session_state.system_prompt_added = False  # Track if the system prompt has been added
 
+if "messages" not in st.session_state:
+        st.session_state.messages = []
+
 # Sidebar with authentication forms
 if 'username' not in st.session_state:
     auth_mode = st.sidebar.selectbox("Select Mode", ["Sign In", "Sign Up"])
@@ -84,6 +87,7 @@ else:
             st.session_state.chat_id = chatid
         for message in st.session_state.messages:
             save_message(conn, st.session_state.chat_id, message["role"], message["message"])
+            
 
     def load_chat(name):
         chats = get_chats(conn, st.session_state.username)
@@ -120,9 +124,6 @@ else:
         for chat in chats:
             if st.button(chat[1], key=f"chat_{chat[0]}"):
                 load_chat(chat[1])
-
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
 
     def greetings():
         if not st.session_state.messages:
@@ -179,6 +180,8 @@ else:
         
         if len(st.session_state.messages) <= 2:
             save_chat()  # Save with the first 3 words of the first assistant's response
+            st.rerun()
         else:
-            for message in st.session_state.messages:
-                save_message(conn, st.session_state.chat_id, message["role"], message["message"])
+            save_message(conn, st.session_state.chat_id, "user", user_input)
+            save_message(conn, st.session_state.chat_id, "assistant", assistant_response)
+            
