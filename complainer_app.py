@@ -69,6 +69,7 @@ else:
         chat_exists = False
 
         if name is None and len(st.session_state.messages) > 1:
+            
             # Extract the first 3 words from the first assistant's response
             first_response = st.session_state.messages[1]["message"]
             name = extract_first_three_words(first_response)
@@ -156,34 +157,28 @@ else:
             st.markdown(message["message"])
 
     # Keep the input area and submit button at the bottom
-    if 'user_input_1' not in st.session_state:
-        st.session_state.user_input_1 = ""
+    user_input = st.chat_input("Let's Chat!")  # Replaces st.text_area with st.chat_input
 
-    user_input = st.text_area("Let's Chat!", value=st.session_state.user_input_1, height=100, key="chat_input")
-
-    if st.button("Submit"):
-        if user_input.strip():  # Check if input is not empty
-            st.session_state.messages.append({"role": "user", "message": user_input})
-            st.session_state.conversation.append({"role": "user", "content": user_input})
-            with st.chat_message("user"):
-                st.markdown(user_input)
-                
-            with st.chat_message("assistant"):
-                message_placeholder = st.empty()
-                assistant_response = ""
-                response = get_openai_response()
-                for char in response:
-                    assistant_response += char
-                    message_placeholder.markdown(assistant_response + "▌")
-                    time.sleep(0.001)
-                message_placeholder.markdown(assistant_response)
-            st.session_state.messages.append({"role": "assistant", "message": assistant_response})
-            st.session_state.conversation.append({"role": "assistant", "content": assistant_response})
+    if user_input:  # st.chat_input already handles empty input cases
+        st.session_state.messages.append({"role": "user", "message": user_input})
+        st.session_state.conversation.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.markdown(user_input)
             
-            if len(st.session_state.messages) <= 2:
-                save_chat()  # Save with the first 3 words of the first assistant's response
-            else:
-                for message in st.session_state.messages:
-                    save_message(conn, st.session_state.chat_id, message["role"], message["message"])
-            st.session_state.user_input_1 = " "
-            st.rerun()
+        with st.chat_message("assistant"):
+            message_placeholder = st.empty()
+            assistant_response = ""
+            response = get_openai_response()
+            for char in response:
+                assistant_response += char
+                message_placeholder.markdown(assistant_response + "▌")
+                time.sleep(0.001)
+            message_placeholder.markdown(assistant_response)
+        st.session_state.messages.append({"role": "assistant", "message": assistant_response})
+        st.session_state.conversation.append({"role": "assistant", "content": assistant_response})
+        
+        if len(st.session_state.messages) <= 2:
+            save_chat()  # Save with the first 3 words of the first assistant's response
+        else:
+            for message in st.session_state.messages:
+                save_message(conn, st.session_state.chat_id, message["role"], message["message"])
